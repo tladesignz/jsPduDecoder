@@ -1,0 +1,61 @@
+body {
+    font-family: 'Verdana', sans-serif;
+}
+
+h1 {
+    margin: 1em;
+
+    font-size: 1.5em;
+    text-align: center;
+}
+
+div#content {
+    margin: 1em;
+
+}
+
+form, div#output {
+    width: 90%;
+
+    margin: 0 auto;
+}
+
+form li {
+    margin: 1ex 0;
+}
+
+form fieldset {
+    border: 1px solid black;
+    padding: 1em;
+}
+
+form legend {
+    padding: 0 1em;
+}
+
+table.data, table.data table {
+    border-collapse: separate;
+    border-spacing: 0.5ex;
+
+    background-color: #EEEEEE;
+}
+
+table.data td {
+    padding: 0.5ex;
+
+    vertical-align: middle;
+
+    background-color: #DDDDDD;
+}
+
+table.data td.one {
+    background-color: #BBBBBB;
+}
+
+table.data table {
+    background-color: #DDDDDD;
+}
+
+table.data table td {
+    background-color: #CCCCCC;
+}

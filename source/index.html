@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>JavaScript PDU Mode SMS Decoder</title>
+        <link rel="stylesheet" type="text/css" charset="UTF-8" href="reset.css" />
+        <link rel="stylesheet" type="text/css" charset="UTF-8" href="pdudecoder.css" />
+        <script type="text/javascript" src="jquery.js"></script>
+        <script type="text/javascript" src="pdudecoder.js"></script>
+    </head>
+    <body>
+        <h1>
+            JavaScript PDU Mode SMS Decoder
+        </h1>
+        <div id="content">
+            <form id="fPdu" action="">
+                <ul>
+                    <li>
+                        <label for="pdu">PDU</label>
+                        <input type="text" id="pdu" name="pdu" size="120" />
+                    </li>
+                    <li>
+                        <input type="checkbox" id="ud_only" name="ud_only" value="1" />
+                        <label for="ud_only">Contains only User Data</label>
+                    </li>
+                    <li>
+                        <fieldset>
+                            <legend>Charset</legend>
+                            <input type="radio" name="alphabet" class="prefix" disabled="disabled" checked="checked" id="standard" value="standard" />
+                            <label for="standard">GSM 7-Bit</label>
+                            <input type="radio" name="alphabet" class="prefix" disabled="disabled" id="ucs2" value="ucs2" />
+                            <label for="ucs2">Unicode UCS2</label>
+                            <input type="radio" name="alphabet" class="prefix" disabled="disabled" id="eightBit" value="8bit" />
+                            <label for="eightBit">8 Bit binary Data</label>
+                        </fieldset>
+                    </li>
+                    <li>
+                        <input type="checkbox" name="udhi" class="prefix" disabled="disabled" id="udhi" value="1" />
+                        <label for="udhi">User Data Header</label>
+                    </li>
+                    <li>
+                        <button type="submit">Decode</button>
+                    </li>
+                </ul>
+            </form>
+            <div id="output"></div>
+        </div>
+    </body>
+</html>
