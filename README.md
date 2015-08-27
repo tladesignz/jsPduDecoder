@@ -14,6 +14,11 @@ by the Free Software Foundation; or the Artistic License.
 See http://dev.perl.org/licenses/ for more information.
 
 
+## TODO
+The original build process was completely implicit in my IDE. This should be replaced with a proper Grunt or Gulp or
+whatever the tool-of-the-day is process. I'm happy for contributions!
+
+
 ## Some test examples, the tool will work with:
 
 
