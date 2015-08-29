@@ -1,3 +1,5 @@
+@import url("reset.css");
+
 body {
     font-family: 'Verdana', sans-serif;
 }
@@ -57,5 +59,34 @@ table.data table {
 }
 
 table.data table td {
+    background-color: #CCCCCC;
+}
+
+#readme {
+    margin-top: 5em;
+}
+
+#readme p {
+    margin: 1em;
+}
+
+#readme table {
+    width: 100%;
+
+    table-layout: fixed;
+}
+
+#readme table caption {
+    margin: 1em;
+}
+
+#readme table td {
+    padding: 1ex;
+
+    word-wrap: break-word;
+    vertical-align: middle;
+}
+
+#readme table tr:nth-child(odd) {
     background-color: #CCCCCC;
 }
