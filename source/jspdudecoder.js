@@ -1,5 +1,5 @@
-/*jslint white: false, onevar: false, plusplus: false, bitwise: false, browser: true, regexp: false */
-/*global $, cleanInput, constructOutput, setForm, pduDecoder, splitter, tokenizer, tokens, wapDecoder, reverse, padwZeros, console, getChar, wapTokens, gsm7bit */
+/*jslint browser: true */
+/*global require, cleanInput, constructOutput, setForm, pduDecoder, splitter, tokenizer, tokens, wapDecoder, reverse, padwZeros, console, getChar, wapTokens, gsm7bit */
 /**
  * pduDecoder
  *
@@ -18,10 +18,14 @@
  * This is done twice:
  *  - using a library from {@linkplain http://twit88.com/home/utility/sms-pdu-encode-decode} (if exists)
  *  - using a self made parser provided herein
- * @author berhart
+ * @author Benjamin Erhart <be@benjaminerhart.com>
  * @constructor
  */
 (function(){
+    'use strict';
+
+    var $ = require('jquery');
+
 
     $( 'document' ).ready( function() {
 
@@ -125,14 +129,15 @@
      * @type String
      */
     function constructOutput( pdu ) {
-        var info = '';
+        var i,
+            info = '';
 
         var data = pduDecoder( pdu );
 
         var datastr = '';
 
         if (typeof data === 'object') {
-            for (var i = 0; i < data.length; ++i) {
+            for (i = 0; i < data.length; ++i) {
                 datastr += '<tr><td>' + data[ i ].replace( /\t/, '</td><td>' ) + '</td></tr>';
             }
         }
@@ -156,7 +161,8 @@
      * @type Array | String
      */
     function pduDecoder( pdu ) {
-        var result = [];
+        var i,
+            result = [];
 
         var octets = splitter( pdu );
 
@@ -166,7 +172,7 @@
 
         var tokens = tokenizer( octets );
 
-        for (var i = 0; i < tokens.length; ++i) {
+        for (i = 0; i < tokens.length; ++i) {
             result.push( tokens[ i ]() );
         }
 
@@ -181,9 +187,10 @@
      * @type Array | null
      */
     function splitter( pdu ) {
-        var octets = [];
+        var i,
+            octets = [];
 
-        for (var i = 0; i < pdu.length; i += 2) {
+        for (i = 0; i < pdu.length; i += 2) {
             var octet = pdu.substr( i, 2 );
 
             if (!octet.match( /^[0-9A-F]{2}$/i )) {
@@ -353,9 +360,10 @@
          * @type String
          */
         Number: function( octets, length ) {
-            var number = '';
+            var i,
+                number = '';
 
-            for (var i = 0; i < octets.length; ++i) {
+            for (i = 0; i < octets.length; ++i) {
                 number += reverse( octets[ i ] );
             }
 
@@ -819,7 +827,9 @@
          * @type String
          */
         SCTS: function( octets ) {
-            for (var i = 0; i < 7; ++i) {
+            var i;
+
+            for (i = 0; i < 7; ++i) {
                 octets[ i ] = reverse( octets[ i ] );
             }
 
@@ -925,18 +935,19 @@
          * @type Object
          */
         UDH: function( octets ) {
-            var IEs = [];		// all Information Elements
-            var IE = {};		// actual Information Element
-            var info = [];
-            var text = '';
-            var isWap = false;
-            var destPort;
-            var isEMS = false;
-            var formatting = [];
-            var ems = [];
-            var style;
-            var format;
-            var color;
+            var i,
+                IEs = [],		// all Information Elements
+                IE = {},		// actual Information Element
+                info = [],
+                text = '',
+                isWap = false,
+                destPort,
+                isEMS = false,
+                formatting = [],
+                ems = [],
+                style,
+                format,
+                color;
 
             // break up Information Elements
             while (octets.length) {
@@ -962,7 +973,7 @@
             }
 
             // Wireless Datagram Protocol IE
-            for (var i = 0; i < IEs.length; ++i) {
+            for (i = 0; i < IEs.length; ++i) {
                 if (IEs[ i ].IEI === 5) {
                     destPort = IEs[ i ].IED[0] * 256 + IEs[ i ].IED[1];
 
@@ -1411,9 +1422,10 @@
      * @type String
      */
     function wapDecoder( octets ) {
-        var pos = 0;
-        var data = [];
-        var dataStr = '';
+        var i,
+            pos = 0,
+            data = [],
+            dataStr = '';
 
         data.push( 'WSP Transaction ID\t0x' + octets[ pos ] );
 
@@ -1430,7 +1442,7 @@
         data.push( 'WAP Binary XML\t' + wapTokens.WBXML( octets.slice( pos ) ) );
 
 
-        for (var i = 0; i < data.length; ++i) {
+        for (i = 0; i < data.length; ++i) {
             dataStr += '<tr><td>' + data[ i ].replace( /\t/, '</td><td>' ) + '</td></tr>';
         }
 
@@ -1469,11 +1481,12 @@
          * @type String
          */
         WSP: function( octets ) {
-            var o;
-            var text = '';
-            var headers = [];
-            var header = {};
-            var wellKnown;
+            var i,
+                o,
+                text = '',
+                headers = [],
+                header = {},
+                wellKnown;
 
             while (octets.length) {
                 o = parseInt( octets.shift(), 16 );
@@ -1539,7 +1552,7 @@
                 }
             }
 
-            for (var i = 0; i < headers.length; i++) {
+            for (i = 0; i < headers.length; i++) {
                 text += headers[ i ].key + ': ' + headers[ i ].value;
             }
 
@@ -1563,9 +1576,10 @@
          * @type String
          */
         WBXML: function( octets ) {
-            var text = '';
+            var i,
+                text = '';
 
-            for (var i = 0; i < octets.length; ++i) {
+            for (i = 0; i < octets.length; ++i) {
                 text += octets[ i ];
             }
 
@@ -1629,7 +1643,7 @@
                 $fields = $( '[name=' + i + ']' );
 
                 $fields.each( function() {
-                    if (this.tagName.match( re.textarea ) || this.tagName.match( re.input ) && this.type.match( re.text )) {
+                    if (this.tagName.match( re.textarea ) || (this.tagName.match( re.input ) && this.type.match( re.text ))) {
                         this.value = params[ i ];
                         changed = true;
                     }
