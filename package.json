@@ -1,0 +1,29 @@
+{
+  "name": "js-pdu-decoder",
+  "version": "1.0.0",
+  "description": "Decodes many PDU encoded SMS formats.",
+  "main": "jspdudecoder.js",
+  "scripts": {
+    "bundle-js": "node_modules/browserify/bin/cmd.js -g uglifyify source/jspdudecoder.js -o source/bundle.js",
+    "bundle-css": "node_modules/clean-css/bin/cleancss source/jspdudecoder.css -o source/bundle.css",
+    "serve": "DEV_SERVER_ROOT=source/ node_modules/dev-server/bin/dev-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:tladesignz/jsPduDecoder.git"
+  },
+  "keywords": [
+    "SMS",
+    "PDU",
+    "Decoder"
+  ],
+  "author": "Benjamin Erhart",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "browserify": "^11.0.1",
+    "clean-css": "^3.4.1",
+    "dev-server": "0.0.2",
+    "jquery": "^2.1.4",
+    "uglifyify": "^3.0.1"
+  }
+}
