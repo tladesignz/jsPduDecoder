@@ -2,6 +2,12 @@
 .settings
 .project
 
+# IntelliJ
+.idea
+
+# MacOS
+.DS_Store
+
 # Node.js
 node_modules
 
