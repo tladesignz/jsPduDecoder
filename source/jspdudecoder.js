@@ -38,11 +38,12 @@
             }
         } );
 
-        $( 'form#fPdu' ).find( ':input' ).change( function( evt ) {
-            $( 'form#fPdu' ).submit();
+        var $fPdu = $( '#fPdu' );
+        $fPdu.find( ':input' ).change( function() {
+            $fPdu.submit();
         } );
 
-        $( 'form#fPdu' ).submit( function( evt ) {
+        $fPdu.submit( function( evt ) {
             evt.preventDefault();
             evt.stopPropagation();
             evt.stopImmediatePropagation();
@@ -53,13 +54,15 @@
 
             var pdu = t.pdu.value;
 
+            var $output = $( '#output' );
+
             if (!pdu) {
-                $( '#output' ).empty();
+                $output.empty();
                 return false;
             }
 
             var prefix = '00';
-            var alphabet;
+            var alphabet = undefined;
             var len;
 
             if (t.ud_only.checked) {
@@ -96,9 +99,9 @@
                 pdu = prefix + pdu;
             }
 
-            $( '#output' ).html( constructOutput( pdu ) );
+            $output.html( constructOutput( pdu ) );
 
-            $( '#output' ).find( 'td:last:contains(&lt;)' ).each( function() {
+            $output.find( 'td:last:contains(&lt;)' ).each( function() {
                 var $this = $( this );
 
                 $this.text( $this.text().replace( /&lt;/g, '<' ).replace( /&gt;/g, '>' ).replace( /&amp;/g, '&' ) );
@@ -124,9 +127,8 @@
     /**
      * Constructs the HTML markup with the information derived from two decoders.
      *
-     * @param {String} pdu Contains the PDU decoded SMS
-     * @return HTML markup
-     * @type String
+     * @param {string} pdu Contains the PDU decoded SMS
+     * @return {string} HTML markup
      */
     function constructOutput( pdu ) {
         var i,
@@ -155,10 +157,9 @@
      * Actual implementation of a PDU decoder. Decodes all information defined in
      * {@linkplain http://www.dreamfabric.com/sms/} and {@linkplain http://mobiletidings.com/}
      *
-     * @param {String} pdu Contains the PDU decoded SMS
-     * @return Decoded information from PDU as one dimensional array, description and information split through '\t'
+     * @param {string} pdu Contains the PDU decoded SMS
+     * @return {Array|string} Decoded information from PDU as one dimensional array, description and information split through '\t'
      * or error string if not a valid PDU
-     * @type Array | String
      */
     function pduDecoder( pdu ) {
         var i,
@@ -182,9 +183,8 @@
     /**
      * Splits a PDU string into an array of 2 byte octets
      *
-     * @param {String} pdu
-     * @return Octets or null if PDU contains invalid characters or has invalid length
-     * @type Array | null
+     * @param {string} pdu
+     * @return {?Array} Octets or null if PDU contains invalid characters or has invalid length
      */
     function splitter( pdu ) {
         var i,
@@ -208,12 +208,11 @@
      * information, each.
      *
      * @param {Array} octets
-     * @return List of tokens represented by resolving functions
-     * @type Array
+     * @return {Array} List of tokens represented by resolving functions
      */
     function tokenizer( octets ) {
         var tokenList = [];
-        var pos = 0;
+        var pos;
         var numberLength;
         var sliceNumber;
         var sliceNumberToA;
@@ -225,9 +224,9 @@
 
         if (smscLength) {
             var sliceSmsc = octets.slice( 2, smscLength + 1 );
-            tokenList.push( function(){ return '(hideable)SMSC number\t' + tokens.Number( sliceSmsc ); } );
             var sliceSmscToA = octets[1];
-            tokenList.push( function(){ return '(hideable)SMSC number info\t' + tokens.ToA( sliceSmscToA ); } );
+            tokenList.push( function(){ return '(hideable)SMSC number\t' + tokens.Number( sliceSmsc, undefined, tokens.ToA( sliceSmscToA ) ); } );
+            tokenList.push( function(){ return '(hideable)SMSC number info\t' + tokens.ToA( sliceSmscToA ).info; } );
         }
 
         // Sender/Receiver part
@@ -242,10 +241,9 @@
             pos++;
             if (numberLength) {
                 sliceNumber = octets.slice( pos + 1, pos + 1 + Math.ceil( numberLength / 2 ) );
-                tokenList.push( function(){ return '(hideable)Number\t' + tokens.Number( sliceNumber, numberLength ); } );
-
                 sliceNumberToA = octets[ pos ];
-                tokenList.push( function(){ return '(hideable)Number info\t' + tokens.ToA( sliceNumberToA ); } );
+                tokenList.push( function(){ return '(hideable)Number\t' + tokens.Number( sliceNumber, numberLength, tokens.ToA( sliceNumberToA ) ); } );
+                tokenList.push( function(){ return '(hideable)Number info\t' + tokens.ToA( sliceNumberToA ).info; } );
 
                 pos += 1 + Math.ceil( numberLength / 2 );
             }
@@ -274,10 +272,9 @@
             pos++;
             if (numberLength) {
                 sliceNumber = octets.slice( pos + 1, pos + 1 + Math.ceil( numberLength / 2 ) );
-                tokenList.push( function(){ return '(hideable)Number\t' + tokens.Number( sliceNumber, numberLength ); } );
-
                 sliceNumberToA = octets[ pos ];
-                tokenList.push( function(){ return '(hideable)Number info\t' + tokens.ToA( sliceNumberToA ); } );
+                tokenList.push( function(){ return '(hideable)Number\t' + tokens.Number( sliceNumber, numberLength, tokens.ToA( sliceNumberToA ) ); } );
+                tokenList.push( function(){ return '(hideable)Number info\t' + tokens.ToA( sliceNumberToA ).info; } );
 
                 pos += 1 + Math.ceil( numberLength / 2 );
             }
@@ -355,26 +352,49 @@
          * {@linkplain http://www.dreamfabric.com/sms/}
          *
          * @param {Array} octets containing a call number in BCD inverted nibble format
-         * @param {Number} length expected length of number
-         * @return Call number of sender, receiver, SMSC etc.
-         * @type String
+         * @param {?number=} length expected length of number
+         * @param {Object=} addressType the result of the ToA token
+         * @return {string} Call number of sender, receiver, SMSC etc.
          */
-        Number: function( octets, length ) {
+        Number: function( octets, length, addressType ) {
             var i,
-                number = '';
+                number = '',
+                thisAndNext,
+                thisChar,
+                nextChar = '',
+                character;
 
-            for (i = 0; i < octets.length; ++i) {
-                number += reverse( octets[ i ] );
-            }
+            if (addressType && addressType.ToN === 0x50) {
+                while (octets.length) {
+                    thisAndNext = getChar( octets, nextChar );
+                    thisChar = thisAndNext[0];
+                    nextChar = thisAndNext[1];
+                    character = gsm7bit[ parseInt( thisChar, 2 ) ];
 
-            if (number.match( /\D$/ ) || (length && number.length > length)) {
-                var paddingEx = /(.)$/;
-                var result = paddingEx.exec( number );
+                    // Extension table on 0x1B
+                    if (typeof character === 'object') {
+                        thisAndNext = getChar( octets, nextChar );
+                        thisChar = thisAndNext[0];
+                        nextChar = thisAndNext[1];
+                        character = character[ parseInt( thisChar, 2 ) ];
+                    }
 
-                number = number.substring( 0, number.length - 1 );
+                    number += character ? character : '';
+                }
+            } else {
+                for (i = 0; i < octets.length; ++i) {
+                    number += reverse( octets[ i ] );
+                }
 
-                if (result && result[1] && result[1] !== 'F') {
-                    number += ' (VIOLATION: number not padded with "F" but with "' + result[1] + '"!)';
+                if (number.match( /\D$/ ) || (length && number.length > length)) {
+                    var paddingEx = /(.)$/;
+                    var result = paddingEx.exec( number );
+
+                    number = number.substring( 0, number.length - 1 );
+
+                    if (result && result[1] && result[1] !== 'F') {
+                        number += ' (VIOLATION: number not padded with "F" but with "' + result[1] + '"!)';
+                    }
                 }
             }
 
@@ -386,9 +406,9 @@
          *
          * {@linkplain http://www.dreamfabric.com/sms/type_of_address.html}
          *
-         * @param {String} octet ToA octet
-         * @return Type-of-Address description text
-         * @type String
+         * @param {string} octet ToA octet
+         * @return {Object} containing ToN (Type of Number) and NPI (Numbering Plan Identification) indicators
+         * and description text
          */
         ToA: function( octet ) {
             var type = parseInt( octet, 16 );
@@ -460,7 +480,11 @@
                 text += ' (VIOLATION: Highest bit should always be set!)';
             }
 
-            return text;
+            return {
+                ToN: ToN,
+                NPI: NPI,
+                info: text
+            };
         },
 
         /**
@@ -471,9 +495,9 @@
          * {@linkplain http://www.dreamfabric.com/sms/deliver_fo.html}
          * {@linkplain http://www.dreamfabric.com/sms/submit_fo.html}
          *
-         * @param {String} octet ToM octet
-         * @return Object containing type string 'submit' or 'deliver', UDHI flag, VPF flag, PDU type description text
-         * @type Object
+         * @param {string} octet ToM octet
+         * @return {Object} containing type string 'submit' or 'deliver', UDHI flag, VPF flag, PDU type
+         * description text
          * @see UDHI token, VPF token
          */
         ToM: function( octet ) {
@@ -498,15 +522,18 @@
                 console.debug( o, padwZeros( o.toString( 2 ) ) );
             }
 
+            // noinspection JSBitwiseOperatorUsage
             if (o & 0x80) {
                 flags.push( 'TP-RP (Reply path exists)' );
             }
+            // noinspection JSBitwiseOperatorUsage
             if (o & 0x40) {
                 TP_UDHI = true;
                 flags.push( 'TP-UDHI (User data header indicator)' );
             }
 
             if (submit) {
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 0x20) {
                     flags.push( 'TP-SRR (Status report request)' );
                 }
@@ -537,6 +564,7 @@
                 }
             }
             else if (deliver) {
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 0x20) {
                     flags.push( 'TP-SRI (Status report indication)' );
                 }
@@ -564,9 +592,8 @@
          *
          * {@linkplain http://www.dreamfabric.com/sms/pid.html}
          *
-         * @param {String} octet PID octet
-         * @return PID description text
-         * @type String
+         * @param {string} octet PID octet
+         * @return {string} PID description text
          */
         PID: function( octet ) {
             var o = parseInt( octet, 16 );
@@ -576,6 +603,7 @@
             if (type === 0) {
                 var firstFive = o & 0x1F;
 
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 0x20) {
                     text += 'Telematic interworking (Type: ';
 
@@ -687,9 +715,8 @@
          *
          * {@linkplain http://www.dreamfabric.com/sms/dcs.html}
          *
-         * @param {String} octet DCS octet
-         * @return Object containing recognized alphabet, DCS description text
-         * @type Object
+         * @param {string} octet DCS octet
+         * @return {Object} Object containing recognized alphabet, DCS description text
          */
         DCS: function( octet ) {
             var o = parseInt( octet, 16 );
@@ -700,6 +727,7 @@
             if (codingGroup >= 0 && codingGroup <= 0x30) {
                 text += 'General Data Coding groups, ';
 
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 0x20) {
                     text += 'compressed';
                 }
@@ -740,10 +768,12 @@
             else if (codingGroup === 0xF0) {
                 text += 'Data coding/message class, ';
 
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 8) {
                     text += '(VIOLATION: reserved bit set, but should not!), ';
                 }
 
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 4) {
                     text += '8 bit data';
                     alphabet = '8bit';
@@ -782,6 +812,7 @@
             }
 
             if (codingGroup >= 0xC0 && codingGroup <= 0xE0) {
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 8) {
                     text += 'Set Indication Active';
                 }
@@ -791,6 +822,7 @@
 
                 text += ', ';
 
+                // noinspection JSBitwiseOperatorUsage
                 if (o & 4) {
                     text += '(reserved bit set, but should not!), ';
                 }
@@ -823,8 +855,7 @@
          * {@linkplain http://www.dreamfabric.com/sms/scts.html}
          *
          * @param {Array} octets containing SCTS in BCD inverted nibble format
-         * @return TimeStamp in format 'YYYY-MM-DD HH:MM:SS GMT +/-X'
-         * @type String
+         * @return {string} TimeStamp in format 'YYYY-MM-DD HH:MM:SS GMT +/-X'
          */
         SCTS: function( octets ) {
             var i;
@@ -846,6 +877,7 @@
 
             var tz = parseInt( octets[6], 10 );
 
+            // noinspection JSBitwiseOperatorUsage
             if (tz & 0x80) {
                 tz = tz & 0x7F;
                 ts += '-';
@@ -860,10 +892,9 @@
         /**
          * User Data Length token
          *
-         * @param {String} octet UDL octet
-         * @param {String} alphabet type
-         * @return length by septets and octets, info text
-         * @type Object
+         * @param {string} octet UDL octet
+         * @param {string} alphabet type
+         * @return {Object} length by septets and octets, info text
          */
         UDL: function( octet, alphabet ) {
             var o = parseInt( octet, 16 );
@@ -895,10 +926,9 @@
          *
          * {@linkplain http://mobiletidings.com/2009/02/18/combining-sms-messages/}
          *
-         * @param {String] octet UDHL octet
-         * @param {String} alphabet type ('default', '8bit', 'ucs2')
-         * @return UDH length in octets / bytes, padding in no. of bits, info text
-         * @type Object
+         * @param {string} octet UDHL octet
+         * @param {string} alphabet type ('default', '8bit', 'ucs2')
+         * @return {Object} UDH length in octets / bytes, padding in no. of bits, info text
          */
         UDHL: function( octet, alphabet ) {
             var length = parseInt( octet, 16 );
@@ -931,8 +961,7 @@
          * {@linkplain http://www.csoft.co.uk/sckl/index.htm}
          *
          * @param {Array} octets containing UDH
-         * @return Wap indication, array of EMS text formatter callbacks, info text
-         * @type Object
+         * @return {Object} Wap indication, array of EMS text formatter callbacks, info text
          */
         UDH: function( octets ) {
             var i,
@@ -1059,18 +1088,22 @@
                         style.push( 'font-size: small' );
                     }
 
+                    // noinspection JSBitwiseOperatorUsage
                     if (format & 0x20) {
                         style.push( 'font-style: italic' );
                     }
 
+                    // noinspection JSBitwiseOperatorUsage
                     if (format & 0x10) {
                         style.push( 'font-weight: bold' );
                     }
 
+                    // noinspection JSBitwiseOperatorUsage
                     if (format & 0x40) {
                         style.push( 'text-decoration: underline' );
                     }
 
+                    // noinspection JSBitwiseOperatorUsage
                     if (format & 0x80) {
                         style.push( 'text-decoration: line-through' );
                     }
@@ -1214,11 +1247,10 @@
          * {@linkplain http://www.dreamfabric.com/sms/hello.html}
          *
          * @param {Array} octets
-         * @param {String} alphabet type ('default', '8bit', 'ucs2')
-         * @param {Number} padding induced by UDH (optional)
+         * @param {string} alphabet type ('default', '8bit', 'ucs2')
+         * @param {number} padding induced by UDH (optional)
          * @param {Array} formatting EMS formatter callbacks
-         * @return Decoded user data
-         * @type String
+         * @return {string} Decoded user data
          */
         UD: function( octets, alphabet, padding, formatting ) {
             var thisAndNext;
@@ -1289,9 +1321,8 @@
         /**
          * Message Reference token (only on PDU type 'submit')
          *
-         * @param {String} octet
-         * @return Info text
-         * @type String
+         * @param {string} octet
+         * @return {string} Info text
          */
         MR: function( octet ) {
             if (octet === '00') {
@@ -1306,9 +1337,8 @@
          *
          * {@linkplain http://www.dreamfabric.com/sms/vp.html}
          *
-         * @param {String} octet
-         * @return info text
-         * @type String
+         * @param {string} octet
+         * @return {string} info text
          */
         VPrelative: function( octet ) {
             var vp = parseInt( octet, 16 );
@@ -1336,9 +1366,8 @@
      * Decodes septets-in-octets encoding of the GSM 7 Bit character set
      *
      * @param {Array} octets
-     * @param {String} nextChar
-     * @return 7 digit bitstream string representing the current decoded character and parts of the next one.
-     * @type [ String, String ]
+     * @param {string} nextChar
+     * @return {Array<string>} 7 digit bitstream string representing the current decoded character and parts of the next one.
      */
     function getChar( octets, nextChar ) {
         if (nextChar.length === 7) {
@@ -1358,9 +1387,8 @@
      *
      * Used to decode BCD inversed nibbles format
      *
-     * @param {String} octet
-     * @return Reversed octet
-     * @type String
+     * @param {string} octet
+     * @return {string} Reversed octet
      */
     function reverse( octet ) {
         if (typeof octet === 'string') {
@@ -1374,9 +1402,8 @@
     /**
      * Pads a bitsream in a string with zeros as long as its shorter than 8 digits
      *
-     * @param {String} bitstream
-     * @return a Zero-padded binary bitstream
-     * @type String
+     * @param {string} bitstream
+     * @return {string} a Zero-padded binary bitstream
      */
     function padwZeros( bitstream ) {
         while (bitstream.length < 8) {
@@ -1417,9 +1444,8 @@
      *
      * {@linkplain http://mobiletidings.com/2009/02/21/wap-push-over-sms-encodings/}
      *
-     * @param octets
-     * @return HTML table containing all decoded information
-     * @type String
+     * @param {Array<string>} octets
+     * @return {string} HTML table containing all decoded information
      */
     function wapDecoder( octets ) {
         var i,
@@ -1457,12 +1483,12 @@
          *
          * {@linkplain http://mobiletidings.com/2009/02/21/wap-push-over-sms-encodings/}
          *
-         * @param {String} octet
-         * @return type of WAP encoded message
-         * @type String
+         * @param {string} octet
+         * @return {string} type of WAP encoded message
          */
         type: function( octet ) {
-            if (octet === 6) {
+            // noinspection EqualityComparisonWithCoercionJS
+            if (octet == 6) {
                 return 'Push';
             }
             return 'unknown';
@@ -1477,8 +1503,7 @@
          * {@linkplain http://mobiletidings.com/2009/02/26/wap-push-over-sms-si-encoding/#comment-1216}
          *
          * @param {Array} octets
-         * @return Information text
-         * @type String
+         * @return {string} Information text
          */
         WSP: function( octets ) {
             var i,
@@ -1572,8 +1597,7 @@
          * {@linkplain http://mobiletidings.com/2009/02/21/wap-push-over-sms-encodings/}
          *
          * @param {Array} octets
-         * @return Decoded WPBXML message
-         * @type String
+         * @return {string} Decoded WPBXML message
          */
         WBXML: function( octets ) {
             var i,
@@ -1610,8 +1634,7 @@
     /**
      * Sets form values from URI query paramater values
      *
-     * @return true if anything was changed
-     * @type Boolean
+     * @return {boolean} true if anything was changed
      */
     function setForm() {
         var query = document.location.search.substr( 1 ).split( '&' );
@@ -1640,7 +1663,7 @@
 
         for (i in params) {
             if (params.hasOwnProperty( i )) {
-                $fields = $( '[name=' + i + ']' );
+                $fields = $( '[name="' + i + '"]' );
 
                 $fields.each( function() {
                     if (this.tagName.match( re.textarea ) || (this.tagName.match( re.input ) && this.type.match( re.text ))) {
