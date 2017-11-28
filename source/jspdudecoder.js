@@ -207,7 +207,7 @@
      * Analyses the PDU octets and returns a list of functions representing one line of
      * information, each.
      *
-     * @param {Array} octets
+     * @param {Array<string>} octets
      * @return {Array} List of tokens represented by resolving functions
      */
     function tokenizer( octets ) {
@@ -351,36 +351,17 @@
          *
          * {@linkplain http://www.dreamfabric.com/sms/}
          *
-         * @param {Array} octets containing a call number in BCD inverted nibble format
+         * @param {Array<string>} octets containing a call number in BCD inverted nibble format or GSM 7-bit encoding
          * @param {?number=} length expected length of number
          * @param {Object=} addressType the result of the ToA token
          * @return {string} Call number of sender, receiver, SMSC etc.
          */
         Number: function( octets, length, addressType ) {
             var i,
-                number = '',
-                thisAndNext,
-                thisChar,
-                nextChar = '',
-                character;
+                number = '';
 
             if (addressType && addressType.ToN === 0x50) {
-                while (octets.length) {
-                    thisAndNext = getChar( octets, nextChar );
-                    thisChar = thisAndNext[0];
-                    nextChar = thisAndNext[1];
-                    character = gsm7bit[ parseInt( thisChar, 2 ) ];
-
-                    // Extension table on 0x1B
-                    if (typeof character === 'object') {
-                        thisAndNext = getChar( octets, nextChar );
-                        thisChar = thisAndNext[0];
-                        nextChar = thisAndNext[1];
-                        character = character[ parseInt( thisChar, 2 ) ];
-                    }
-
-                    number += character ? character : '';
-                }
+                number = decode7Bit( octets );
             } else {
                 for (i = 0; i < octets.length; ++i) {
                     number += reverse( octets[ i ] );
@@ -854,7 +835,7 @@
          *
          * {@linkplain http://www.dreamfabric.com/sms/scts.html}
          *
-         * @param {Array} octets containing SCTS in BCD inverted nibble format
+         * @param {Array<string>} octets containing SCTS in BCD inverted nibble format
          * @return {string} TimeStamp in format 'YYYY-MM-DD HH:MM:SS GMT +/-X'
          */
         SCTS: function( octets ) {
@@ -960,7 +941,7 @@
          * {@linkplain http://mobiletidings.com/2009/03/12/text-formatting-sms-ems/}
          * {@linkplain http://www.csoft.co.uk/sckl/index.htm}
          *
-         * @param {Array} octets containing UDH
+         * @param {Array<string>} octets containing UDH
          * @return {Object} Wap indication, array of EMS text formatter callbacks, info text
          */
         UDH: function( octets ) {
@@ -1246,43 +1227,19 @@
          *
          * {@linkplain http://www.dreamfabric.com/sms/hello.html}
          *
-         * @param {Array} octets
+         * @param {Array<string>} octets
          * @param {string} alphabet type ('default', '8bit', 'ucs2')
-         * @param {number} padding induced by UDH (optional)
-         * @param {Array} formatting EMS formatter callbacks
+         * @param {number?} padding in no. of bits from UDHL (optional)
+         * @param {Array<Function>} formatting EMS formatter callbacks
          * @return {string} Decoded user data
          */
         UD: function( octets, alphabet, padding, formatting ) {
-            var thisAndNext;
-            var thisChar;
-            var nextChar = '';
-            var text = '';
-            var i = 0;
-            var original;
-            var character;
+            var thisChar, original,
+                text = '',
+                i = 0;
 
             if (alphabet === 'default') {
-                if (padding && octets.length) {
-                    nextChar = padwZeros( parseInt( octets.shift(), 16 ).toString( 2 ) );
-                    nextChar = nextChar.substring( 0, nextChar.length - padding );
-                }
-
-                while (octets.length) {
-                    thisAndNext = getChar( octets, nextChar );
-                    thisChar = thisAndNext[0];
-                    nextChar = thisAndNext[1];
-                    character = gsm7bit[ parseInt( thisChar, 2 ) ];
-
-                    // Extension table on 0x1B
-                    if (typeof character === 'object') {
-                        thisAndNext = getChar( octets, nextChar );
-                        thisChar = thisAndNext[0];
-                        nextChar = thisAndNext[1];
-                        character = character[ parseInt( thisChar, 2 ) ];
-                    }
-
-                    text += character ? character : '';
-                }
+                text = decode7Bit( octets, padding );
             }
             else if (alphabet === 'ucs2') {
                 while (octets.length) {
@@ -1363,9 +1320,46 @@
     };
 
     /**
+     * Decodes all given octets to a string using the GSM 7-bit encoding.
+     *
+     * @param {Array<string>} octets
+     * @param {number?} padding in no. of bits from UDHL (optional)
+     * @returns {string} the readable content of the given octets.
+     */
+    function decode7Bit( octets, padding ) {
+        var thisAndNext, thisChar, character,
+            nextChar = '',
+            text = '';
+
+        if (padding && octets.length) {
+            nextChar = padwZeros( parseInt( octets.shift(), 16 ).toString( 2 ) );
+            nextChar = nextChar.substring( 0, nextChar.length - padding );
+        }
+
+        while (octets.length || parseInt( nextChar, 2 )) {
+            thisAndNext = getChar( octets, nextChar );
+            thisChar = thisAndNext[0];
+            nextChar = thisAndNext[1];
+            character = gsm7bit[ parseInt( thisChar, 2 ) ];
+
+            // Extension table on 0x1B
+            if (typeof character === 'object') {
+                thisAndNext = getChar( octets, nextChar );
+                thisChar = thisAndNext[0];
+                nextChar = thisAndNext[1];
+                character = character[ parseInt( thisChar, 2 ) ];
+            }
+
+            text += character ? character : '';
+        }
+
+        return text;
+    }
+
+    /**
      * Decodes septets-in-octets encoding of the GSM 7 Bit character set
      *
-     * @param {Array} octets
+     * @param {Array<string>} octets
      * @param {string} nextChar
      * @return {Array<string>} 7 digit bitstream string representing the current decoded character and parts of the next one.
      */
@@ -1502,7 +1496,7 @@
          * {@linkplain http://mobiletidings.com/2009/02/21/wap-push-over-sms-encodings/}
          * {@linkplain http://mobiletidings.com/2009/02/26/wap-push-over-sms-si-encoding/#comment-1216}
          *
-         * @param {Array} octets
+         * @param {Array<string>} octets
          * @return {string} Information text
          */
         WSP: function( octets ) {
@@ -1587,7 +1581,7 @@
         /**
          * WAP Binary XML token
          *
-         * Invoces a server-side decoder.
+         * Invokes a server-side decoder.
          * Since XML markup should be returned, it's probably safe to asume that if the
          * return value doesn't contain a '&', the decoding failed.
          * If this happens, a fallback ASCII decoding will take place.
@@ -1596,7 +1590,7 @@
          * {@linkplain http://search.cpan.org/~glasser/XML-WBXML-0.03/lib/XML/WBXML.pm}
          * {@linkplain http://mobiletidings.com/2009/02/21/wap-push-over-sms-encodings/}
          *
-         * @param {Array} octets
+         * @param {Array<string>} octets
          * @return {string} Decoded WPBXML message
          */
         WBXML: function( octets ) {
