@@ -24,4 +24,3 @@ if (!$@) {
 binmode STDOUT, ':utf8';
 
 print "Content-Type: text/plain; charset=UTF-8\r\n\r\n$xml";
-
